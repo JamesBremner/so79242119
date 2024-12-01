@@ -83,6 +83,9 @@ sRequest& chooseFastestRequest( int& bestTime )
     for( auto& tr : theRequestsWaiting )
     {
         int timeRequired = abs( tr.sector - theHead.sector ) / 5;
+        bool isAsc = ( theHead.sector > tr.sector );
+        if( isAsc != theHead.asc )
+            timeRequired += 10;
         if( timeRequired < bestTime ) {
             bestTime = timeRequired;
             ret = tr;
@@ -98,6 +101,7 @@ void startRequest()
     theEventQueue.push( sEvent(r,theSimTime+timeRequired));
     theRequestsWaiting.erase( theRequestsWaiting.begin());
     theHead.busy = true;
+    theHead.asc = ( r.sector >= theHead.sector );
     std::cout << "Head moving from " << theHead.sector <<" to "<< r.sector << "\n";
 }
 
