@@ -56,6 +56,8 @@ sHead theHead;
 
 int theSimTime;
 
+int totalDistance;
+
 void readfile(const std::string &fname)
 {
     // The input will be of the following format with the first number representing the sector to be serviced
@@ -102,6 +104,7 @@ void startRequest()
     theRequestsWaiting.erase( theRequestsWaiting.begin());
     theHead.busy = true;
     theHead.asc = ( r.sector >= theHead.sector );
+    totalDistance += abs( r.sector - theHead.sector );
     std::cout << "Head moving from " << theHead.sector <<" to "<< r.sector << "\n";
 }
 
@@ -111,6 +114,7 @@ void Simulate()
     for( auto & r : theRequests )
         theEventQueue.push(r);
     theSimTime = 0;
+    totalDistance = 0;
     while( theEventQueue.size() )
     {
         auto& e = theEventQueue.top();
@@ -134,7 +138,7 @@ void Simulate()
         }
         theEventQueue.pop();
     }
-
+    std::cout << "time " << theSimTime << ", distance " << totalDistance;
 
 }
 main()
