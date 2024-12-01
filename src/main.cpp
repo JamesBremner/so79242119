@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <climits>
 #include <queue>
 #include <algorithm>
 
@@ -75,10 +76,25 @@ void readfile(const std::string &fname)
     }
 }
 
+sRequest& chooseFastestRequest( int& bestTime )
+{
+    sRequest& ret = theRequestsWaiting[0];
+    bestTime = INT_MAX;
+    for( auto& tr : theRequestsWaiting )
+    {
+        int timeRequired = abs( tr.sector - theHead.sector ) / 5;
+        if( timeRequired < bestTime ) {
+            bestTime = timeRequired;
+            ret = tr;
+        }
+    }
+    return ret;
+}
+
 void startRequest()
 {
-    auto& r = theRequestsWaiting[0];
-    int timeRequired = abs( r.sector - theHead.sector ) / 5;
+    int timeRequired;
+    auto& r = chooseFastestRequest( timeRequired );
     theEventQueue.push( sEvent(r,theSimTime+timeRequired));
     theRequestsWaiting.erase( theRequestsWaiting.begin());
     theHead.busy = true;
