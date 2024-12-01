@@ -15,23 +15,27 @@ struct sRequest
 
 struct sEvent
 {
-    enum class eEventType {
+    enum class eEventType
+    {
         arrival,
         completion
     };
     eEventType type;
     sRequest request;
     int time;
-    sEvent( const sRequest& r )
-    : request( r ), time( r.arrival ),
-    type( eEventType::arrival)
-    {}
-    sEvent( const sRequest& r, int t )
-    : request( r ), time( t ), type( eEventType::completion)
-    {}
+    sEvent(const sRequest &r)
+        : request(r), time(r.arrival),
+          type(eEventType::arrival)
+    {
+    }
+    sEvent(const sRequest &r, int t)
+        : request(r), time(t), type(eEventType::completion)
+    {
+    }
 };
 
-struct sHead {
+struct sHead
+{
     bool busy;
     int sector;
     bool asc;
@@ -40,17 +44,16 @@ struct sHead {
 class eventComp
 {
 public:
-
-  bool operator() (const sEvent& lhs, const sEvent& rhs) const
-  {
-     return (lhs.time>rhs.time);
-  }
+    bool operator()(const sEvent &lhs, const sEvent &rhs) const
+    {
+        return (lhs.time > rhs.time);
+    }
 };
 
 std::vector<sRequest> theRequests;
 std::vector<sRequest> theRequestsWaiting;
 
-std::priority_queue<sEvent,std::vector<sEvent>, eventComp> theEventQueue;
+std::priority_queue<sEvent, std::vector<sEvent>, eventComp> theEventQueue;
 
 sHead theHead;
 
@@ -78,68 +81,76 @@ void readfile(const std::string &fname)
     }
 }
 
-sRequest& chooseFastestRequest( int& bestTime )
+sRequest &chooseFastestRequest(int &bestTime)
 {
-    sRequest& ret = theRequestsWaiting[0];
+    sRequest &ret = theRequestsWaiting[0];
     bestTime = INT_MAX;
-    for( auto& tr : theRequestsWaiting )
+    for (auto &tr : theRequestsWaiting)
     {
-        int timeRequired = abs( tr.sector - theHead.sector ) / 5;
-        bool isAsc = ( theHead.sector > tr.sector );
-        if( isAsc != theHead.asc )
+        int timeRequired = abs(tr.sector - theHead.sector) / 5;
+        bool isAsc = (theHead.sector > tr.sector);
+        if (isAsc != theHead.asc)
             timeRequired += 10;
-        if( timeRequired < bestTime ) {
+        if (timeRequired < bestTime)
+        {
             bestTime = timeRequired;
             ret = tr;
         }
     }
+    ret.arrival = -1; // mark for deletion
     return ret;
 }
 
 void startRequest()
 {
     int timeRequired;
-    auto& r = chooseFastestRequest( timeRequired );
-    theEventQueue.push( sEvent(r,theSimTime+timeRequired));
-    theRequestsWaiting.erase( theRequestsWaiting.begin());
+    auto &r = chooseFastestRequest(timeRequired);
+    theEventQueue.push(sEvent(r, theSimTime + timeRequired));
     theHead.busy = true;
-    theHead.asc = ( r.sector >= theHead.sector );
-    totalDistance += abs( r.sector - theHead.sector );
-    std::cout << "Head moving from " << theHead.sector <<" to "<< r.sector << "\n";
+    theHead.asc = (r.sector >= theHead.sector);
+    totalDistance += abs(r.sector - theHead.sector);
+    auto it = std::find_if(
+        theRequestsWaiting.begin(), theRequestsWaiting.end(),
+        [](const sRequest &r) -> bool
+        {
+            return r.arrival == -1;
+        });
+    theRequestsWaiting.erase(it);
+    std::cout << "Head moving from " << theHead.sector << " to " << r.sector << "\n";
 }
 
 void Simulate()
 {
     // load request arrivals into event queue
-    for( auto & r : theRequests )
+    for (auto &r : theRequests)
         theEventQueue.push(r);
     theSimTime = 0;
     totalDistance = 0;
-    while( theEventQueue.size() )
+    while (theEventQueue.size())
     {
-        auto& e = theEventQueue.top();
+        auto &e = theEventQueue.top();
         theSimTime = e.time;
-        switch( e.type ) {
+        switch (e.type)
+        {
 
-            case sEvent::eEventType::arrival:
+        case sEvent::eEventType::arrival:
             std::cout << e.request.sector << " sector request arrived at " << theSimTime << "\n";
-            theRequestsWaiting.push_back( e.request );
-            if( ! theHead.busy)
+            theRequestsWaiting.push_back(e.request);
+            if (!theHead.busy)
                 startRequest();
             break;
 
-            case sEvent::eEventType::completion:
+        case sEvent::eEventType::completion:
             std::cout << e.request.sector << " sector completed at " << theSimTime << "\n";
             theHead.sector = e.request.sector;
             theHead.busy = false;
-            if( theRequestsWaiting.size() )
+            if (theRequestsWaiting.size())
                 startRequest();
             break;
         }
         theEventQueue.pop();
     }
     std::cout << "time " << theSimTime << ", distance " << totalDistance;
-
 }
 main()
 {
