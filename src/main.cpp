@@ -81,16 +81,22 @@ void readfile(const std::string &fname)
     }
 }
 
+int moveTime( int nextSector )
+{
+    int ret =  abs(nextSector - theHead.sector) / 5;
+    bool isAsc = (theHead.sector < nextSector);
+    if (isAsc != theHead.asc)
+            ret += 10;
+    return ret;
+}
+
 sRequest &chooseFastestRequest(int &bestTime)
 {
     sRequest &ret = theRequestsWaiting[0];
     bestTime = INT_MAX;
     for (auto &tr : theRequestsWaiting)
     {
-        int timeRequired = abs(tr.sector - theHead.sector) / 5;
-        bool isAsc = (theHead.sector > tr.sector);
-        if (isAsc != theHead.asc)
-            timeRequired += 10;
+        int timeRequired = moveTime(tr.sector);
         if (timeRequired < bestTime)
         {
             bestTime = timeRequired;
