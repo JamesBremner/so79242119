@@ -30,6 +30,12 @@ struct sEvent
     {}
 };
 
+struct sHead {
+    bool busy;
+    int sector;
+    bool asc;
+};
+
 class eventComp
 {
 public:
@@ -41,8 +47,13 @@ public:
 };
 
 std::vector<sRequest> theRequests;
+std::vector<sRequest> theRequestsWaiting;
 
 std::priority_queue<sEvent,std::vector<sEvent>, eventComp> theEventQueue;
+
+sHead theHead;
+
+int theSimTime;
 
 void readfile(const std::string &fname)
 {
@@ -64,24 +75,41 @@ void readfile(const std::string &fname)
     }
 }
 
+void startRequest()
+{
+    auto& r = theRequestsWaiting[0];
+    int timeRequired = abs( r.sector - theHead.sector ) / 5;
+    theEventQueue.push( sEvent(r,theSimTime+timeRequired));
+    theRequestsWaiting.erase( theRequestsWaiting.begin());
+    theHead.busy = true;
+    std::cout << "Head moving from " << theHead.sector <<" to "<< r.sector << "\n";
+}
+
 void Simulate()
 {
     // load request arrivals into event queue
     for( auto & r : theRequests )
         theEventQueue.push(r);
-    int time = 0;
+    theSimTime = 0;
     while( theEventQueue.size() )
     {
         auto& e = theEventQueue.top();
-        time = e.time;
+        theSimTime = e.time;
         switch( e.type ) {
+
             case sEvent::eEventType::arrival:
-            std::cout << e.request.sector << " sector request at " << time << "\n";
-            theEventQueue.push(
-                sEvent( e.request, time + 20 )            );
+            std::cout << e.request.sector << " sector request arrived at " << theSimTime << "\n";
+            theRequestsWaiting.push_back( e.request );
+            if( ! theHead.busy)
+                startRequest();
             break;
+
             case sEvent::eEventType::completion:
-            std::cout << e.request.sector << " sector completed at " << time << "\n";
+            std::cout << e.request.sector << " sector completed at " << theSimTime << "\n";
+            theHead.sector = e.request.sector;
+            theHead.busy = false;
+            if( theRequestsWaiting.size() )
+                startRequest();
             break;
         }
         theEventQueue.pop();
