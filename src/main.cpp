@@ -39,6 +39,7 @@ struct sHead
     bool busy;
     int sector;
     bool asc;
+    int totalDistance;
 };
 
 class eventComp
@@ -59,7 +60,6 @@ sHead theHead;
 
 int theSimTime;
 
-int totalDistance;
 
 void readfile(const std::string &fname)
 {
@@ -109,12 +109,19 @@ sRequest &chooseFastestRequest(int &bestTime)
 
 void startRequest()
 {
+    // find nearest sector, by time
     int timeRequired;
     auto &r = chooseFastestRequest(timeRequired);
+
+    // add arrival at sector event
     theEventQueue.push(sEvent(r, theSimTime + timeRequired));
+
+    // update read head status
     theHead.busy = true;
     theHead.asc = (r.sector >= theHead.sector);
-    totalDistance += abs(r.sector - theHead.sector);
+    theHead.totalDistance += abs(r.sector - theHead.sector);
+
+    // remove handled request from waiting requests
     auto it = std::find_if(
         theRequestsWaiting.begin(), theRequestsWaiting.end(),
         [](const sRequest &r) -> bool
@@ -122,6 +129,7 @@ void startRequest()
             return r.arrival == -1;
         });
     theRequestsWaiting.erase(it);
+
     std::cout << "Head moving from " << theHead.sector << " to " << r.sector << "\n";
 }
 
@@ -130,10 +138,14 @@ void Simulate()
     // load request arrivals into event queue
     for (auto &r : theRequests)
         theEventQueue.push(r);
+
+    // initialize simulation
     theSimTime = 0;
-    totalDistance = 0;
+    theHead.totalDistance = 0;
+    // run until no more events
     while (theEventQueue.size())
     {
+        // handle next event
         auto &e = theEventQueue.top();
         theSimTime = e.time;
         switch (e.type)
@@ -156,7 +168,7 @@ void Simulate()
         }
         theEventQueue.pop();
     }
-    std::cout << "time " << theSimTime << ", distance " << totalDistance;
+    std::cout << "time " << theSimTime << ", distance " << theHead.totalDistance;
 }
 main()
 {
